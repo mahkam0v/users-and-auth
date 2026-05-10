@@ -1,28 +1,68 @@
-import Todo from "../models/todo.model.js"
+import { AppDataSource } from "../config/data-source.js"
+import { TodoEntity } from "../models/todo.entity.js"
 
-const todoPopulate = [
-	{ path: "assignedTo", select: "name email role" },
-	{ path: "createdBy", select: "name email role" },
-]
+const getTodoRepository = () => AppDataSource.getRepository(TodoEntity)
 
-export const findAllTodos = async (filters) => {
-	return Todo.find(filters).populate(todoPopulate).sort({ createdAt: -1 })
+const relations = {
+	assignedTo: true,
+	createdBy: true,
+}
+
+export const findAllTodos = async (filters = {}) => {
+	const todoRepository = getTodoRepository()
+	const where = {}
+
+	if (filters.assignedTo) {
+		where.assignedTo = { id: filters.assignedTo }
+	}
+
+	return todoRepository.find({
+		where,
+		relations,
+		order: { id: "DESC" },
+	})
 }
 
 export const findTodoById = async (id) => {
-	return Todo.findById(id).populate(todoPopulate)
+	const todoRepository = getTodoRepository()
+
+	return todoRepository.findOne({
+		where: { id },
+		relations,
+	})
 }
 
 export const createTodo = async (data) => {
-	const todo = await Todo.create(data)
+	const todoRepository = getTodoRepository()
+	const todo = todoRepository.create(data)
+	const savedTodo = await todoRepository.save(todo)
 
-	return Todo.findById(todo._id).populate(todoPopulate)
+	return findTodoById(savedTodo.id)
 }
 
 export const updateTodoById = async (id, data) => {
-	return Todo.findByIdAndUpdate(id, data, { new: true }).populate(todoPopulate)
+	const todoRepository = getTodoRepository()
+	const existingTodo = await todoRepository.findOneBy({ id })
+
+	if (!existingTodo) {
+		return null
+	}
+
+	const mergedTodo = todoRepository.merge(existingTodo, data)
+	await todoRepository.save(mergedTodo)
+
+	return findTodoById(id)
 }
 
 export const deleteTodoById = async (id) => {
-	return Todo.findByIdAndDelete(id).populate(todoPopulate)
+	const todo = await findTodoById(id)
+
+	if (!todo) {
+		return null
+	}
+
+	const todoRepository = getTodoRepository()
+	await todoRepository.remove(todo)
+
+	return todo
 }

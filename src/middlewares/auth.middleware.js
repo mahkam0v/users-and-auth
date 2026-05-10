@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken"
-import User from "../models/user.model.js"
+import * as userRepository from "../repositories/user.repository.js"
 
 export const protect = async (req, res, next) => {
 	try {
@@ -11,8 +11,13 @@ export const protect = async (req, res, next) => {
 
 		const token = header.split(" ")[1]
 		const decoded = jwt.verify(token, process.env.JWT_SECRET)
+		const userId = Number.parseInt(decoded.id, 10)
 
-		const user = await User.findById(decoded.id)
+		if (Number.isNaN(userId) || userId <= 0) {
+			return res.status(401).json({ message: "Invalid token" })
+		}
+
+		const user = await userRepository.findUserById(userId)
 		if (!user) {
 			return res.status(401).json({ message: "User not found" })
 		}

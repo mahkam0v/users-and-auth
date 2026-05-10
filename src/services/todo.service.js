@@ -1,41 +1,47 @@
-import mongoose from "mongoose"
 import * as todoRepository from "../repositories/todo.repository.js"
 import * as userRepository from "../repositories/user.repository.js"
 
 const checkTodoId = (id) => {
-	if (!mongoose.Types.ObjectId.isValid(id)) {
+	const parsedId = Number.parseInt(id, 10)
+
+	if (Number.isNaN(parsedId) || parsedId <= 0) {
 		const error = new Error("Invalid todo ID format")
 		error.statusCode = 400
 		throw error
 	}
+
+	return parsedId
 }
 
 const checkUserId = (id) => {
-	if (!mongoose.Types.ObjectId.isValid(id)) {
+	const parsedId = Number.parseInt(id, 10)
+
+	if (Number.isNaN(parsedId) || parsedId <= 0) {
 		const error = new Error("Invalid user ID format")
 		error.statusCode = 400
 		throw error
 	}
+
+	return parsedId
 }
 export const getAllTodos = async (currentUser, query) => {
 	const filters = {}
 
 	if (currentUser.role === "admin") {
 		if (query.assignedTo) {
-			checkUserId(query.assignedTo)
-			filters.assignedTo = query.assignedTo
+			filters.assignedTo = checkUserId(query.assignedTo)
 		}
 	} else {
-		filters.assignedTo = currentUser._id
+		filters.assignedTo = currentUser.id
 	}
 
 	return todoRepository.findAllTodos(filters)
 }
 
 export const getTodoById = async (id, currentUser) => {
-	checkTodoId(id)
+	const todoId = checkTodoId(id)
 
-	const todo = await todoRepository.findTodoById(id)
+	const todo = await todoRepository.findTodoById(todoId)
 
 	if (!todo) {
 		const error = new Error("Todo not found")
@@ -46,7 +52,7 @@ export const getTodoById = async (id, currentUser) => {
 	if (
 		currentUser.role !== "admin" &&
 		todo.assignedTo &&
-		todo.assignedTo._id.toString() !== currentUser._id.toString()
+		todo.assignedTo.id !== currentUser.id
 	) {
 		const error = new Error("Siz bu todo ni ko'ra olmaysiz")
 		error.statusCode = 403
@@ -57,9 +63,9 @@ export const getTodoById = async (id, currentUser) => {
 }
 
 export const createTodo = async (data, currentUser, adminUserId) => {
-	checkUserId(adminUserId)
+	const creatorId = checkUserId(adminUserId)
 
-	if (currentUser._id.toString() !== adminUserId) {
+	if (currentUser.id !== creatorId) {
 		const error = new Error("URL dagi user bilan token user mos emas")
 		error.statusCode = 403
 		throw error
@@ -71,9 +77,9 @@ export const createTodo = async (data, currentUser, adminUserId) => {
 		throw error
 	}
 
-	checkUserId(data.assignedTo)
+	const assignedUserId = checkUserId(data.assignedTo)
 
-	const assignedUser = await userRepository.findUserById(data.assignedTo)
+	const assignedUser = await userRepository.findUserById(assignedUserId)
 
 	if (!assignedUser) {
 		const error = new Error("Biriktiriladigan user topilmadi")
@@ -91,8 +97,8 @@ export const createTodo = async (data, currentUser, adminUserId) => {
 		title: data.title,
 		description: data.description,
 		isCompleted: data.isCompleted,
-		assignedTo: data.assignedTo,
-		createdBy: currentUser._id,
+		assignedTo: assignedUser,
+		createdBy: currentUser,
 	})
 }
 
@@ -103,12 +109,12 @@ export const updateTodo = async (id, data, currentUser) => {
 		throw error
 	}
 
-	checkTodoId(id)
+	const todoId = checkTodoId(id)
 
 	if (data.assignedTo) {
-		checkUserId(data.assignedTo)
+		const assignedUserId = checkUserId(data.assignedTo)
 
-		const assignedUser = await userRepository.findUserById(data.assignedTo)
+		const assignedUser = await userRepository.findUserById(assignedUserId)
 
 		if (!assignedUser) {
 			const error = new Error("Biriktiriladigan user topilmadi")
@@ -121,9 +127,11 @@ export const updateTodo = async (id, data, currentUser) => {
 			error.statusCode = 400
 			throw error
 		}
+
+		data.assignedTo = assignedUser
 	}
 
-	const todo = await todoRepository.updateTodoById(id, data)
+	const todo = await todoRepository.updateTodoById(todoId, data)
 
 	if (!todo) {
 		const error = new Error("Todo not found")
@@ -141,9 +149,9 @@ export const deleteTodo = async (id, currentUser) => {
 		throw error
 	}
 
-	checkTodoId(id)
+	const todoId = checkTodoId(id)
 
-	const todo = await todoRepository.deleteTodoById(id)
+	const todo = await todoRepository.deleteTodoById(todoId)
 
 	if (!todo) {
 		const error = new Error("Todo not found")

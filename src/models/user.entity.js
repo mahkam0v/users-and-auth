@@ -48,9 +48,16 @@ export const UserEntity = new EntitySchema({
       updateDate: true,
     },
   },
+  relations: {
+    assignedTodos: {
+      type: "one-to-many",
+      target: "Todo",
+      inverseSide: "assignedTo",
+    },
+    createdTodos: {
+      type: "one-to-many",
+      target: "Todo",
+      inverseSide: "createdBy",
+    },
+  },
 });
-
-export const TodoEntity = new EntitySchema ({
-  name: 'todo',
-  tableName: 'todos',
-})

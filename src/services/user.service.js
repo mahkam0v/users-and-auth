@@ -1,5 +1,4 @@
 import * as userRepository from "../repositories/user.repository.js"
-import mongoose from "mongoose"
 import jwt from "jsonwebtoken"
 
 import bcrypt from 'bcrypt'
@@ -9,6 +8,18 @@ const sanitizeUser = (user) => {
 	delete userObject.password
 
 	return userObject
+}
+
+const parseUserId = (id) => {
+	const parsedId = Number.parseInt(id, 10)
+
+	if (Number.isNaN(parsedId) || parsedId <= 0) {
+		const error = new Error("Invalid user ID format")
+		error.statusCode = 400
+		throw error
+	}
+
+	return parsedId
 }
 
 export const getAllUsers = async (query) => {
@@ -31,22 +42,18 @@ export const getAllUsers = async (query) => {
 }
 
 export const getUserById = async (id, currentUser) => {
-	if (!mongoose.Types.ObjectId.isValid(id)) {
-		const error = new Error("Invalid user ID format")
-		error.statusCode = 400
-		throw error
-	}
+	const userId = parseUserId(id)
 
 	if (
 		currentUser.role !== "admin" &&
-		currentUser._id.toString() !== id
+		currentUser.id !== userId
 	) {
 		const error = new Error("Siz faqat o'zingizni ko'ra olasiz")
 		error.statusCode = 403
 		throw error
 	}
 
-	const user = await userRepository.findUserById(id)
+	const user = await userRepository.findUserById(userId)
 
 	if (!user) {
 		const error = new Error("User not found")
@@ -83,13 +90,9 @@ export const createUser = async (data) => {
 }
 
 export const deleteUser = async (id) => {
-	if (!mongoose.Types.ObjectId.isValid(id)) {
-		const error = new Error("Invalid user ID format")
-		error.statusCode = 400
-		throw error
-	}
+	const userId = parseUserId(id)
 
-	const deletedUser = await userRepository.deleteUserById(id)
+	const deletedUser = await userRepository.deleteUserById(userId)
 
 	if (!deletedUser) {
 		const error = new Error("User not found")
@@ -122,7 +125,7 @@ export const register = async (data) => {
 	})
 
 	const token = jwt.sign(
-		{ id: user._id, role: user.role },
+		{ id: user.id, role: user.role },
 		process.env.JWT_SECRET,
 		{ expiresIn: "1d" },
 	)
@@ -146,7 +149,7 @@ export const login = async ({ email, password }) => {
 	}
 
 	const token = jwt.sign(
-		{ id: user._id, role: user.role },
+		{ id: user.id, role: user.role },
 		process.env.JWT_SECRET,
 		{ expiresIn: "1d" },
 	)
