@@ -104,33 +104,43 @@ export const deleteUser = async (id) => {
 }
 
 
-export const register = async (data) => {	
-	const { name, email, password, age, role } = data
+export const register = async (data) => { 
+  const { name, email, password, age, role } = data
 
-	const existingUser = await userRepository.findUserByEmail(email)
-	if (existingUser) {
-		const error = new Error("User already exists")
-		error.statusCode = 400
-		throw error
-	}
+  const existingUser = await userRepository.findUserByEmail(email)
+  if (existingUser) {
+    const error = new Error("User already exists")
+    error.statusCode = 400
+    throw error
+  }
 
-	const hashedPassword = await bcrypt.hash(password, 10)
+  const hashedPassword = await bcrypt.hash(password, 10)
 
-	const user = await userRepository.createUser({
-		name,
-		email,
-		password: hashedPassword,
-		age,
-		role,
-	})
+  const user = await userRepository.createUser({
+    name,
+    email,
+    password: hashedPassword,
+    age,
+    role,
+  })
 
-	const token = jwt.sign(
-		{ id: user.id, role: user.role },
-		process.env.JWT_SECRET,
-		{ expiresIn: "1d" },
-	)
+  const accessToken = jwt.sign(
+    { id: user.id, role: user.role },
+    process.env.JWT_ACCESS_SECRET,
+    { expiresIn: "15m" },
+  )
 
-	return { user: sanitizeUser(user), token }
+  const refreshToken = jwt.sign(
+    { id: user.id }, 
+    process.env.JWT_REFRESH_SECRET,
+    { expiresIn: "7d" }
+  )
+
+  return { 
+    user: sanitizeUser(user), 
+    accessToken, 
+    refreshToken 
+  }
 }
 
 export const login = async ({ email, password }) => {
@@ -148,11 +158,42 @@ export const login = async ({ email, password }) => {
 		throw error
 	}
 
-	const token = jwt.sign(
-		{ id: user.id, role: user.role },
-		process.env.JWT_SECRET,
-		{ expiresIn: "1d" },
-	)
+	const accessToken = jwt.sign(
+    { id: user.id, role: user.role },
+    process.env.JWT_ACCESS_SECRET,
+    { expiresIn: "15m" }
+  );
 
-	return { user: sanitizeUser(user), token }
+	const refreshToken = jwt.sign(
+    { id: user.id }, 
+    process.env.JWT_REFRESH_SECRET,
+    { expiresIn: "7d" }
+  );
+
+	return {
+		user: sanitizeUser(user),
+		accessToken,
+		refreshToken
+	}
 }
+
+export const refreshAccessToken = async (token) => {
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+    
+    const user = await userRepository.findUserById(decoded.id);
+    if (!user) throw new Error("User not found");
+
+    const accessToken = jwt.sign(
+      { id: user.id, role: user.role },
+      process.env.JWT_ACCESS_SECRET,
+      { expiresIn: "15m" }
+    );
+
+    return { accessToken };
+  } catch (error) {
+    const refreshError = new Error("Refresh token expired or invalid");
+    refreshError.statusCode = 403;
+    throw refreshError;
+  }
+};

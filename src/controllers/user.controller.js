@@ -71,3 +71,16 @@ export const deleteUser = async (req, res, next) => {
 		next(error)
 	}
 }
+
+// user.controller.js
+export const refresh = async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body;
+    
+    const result = await userService.refreshAccessToken(refreshToken);
+
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};

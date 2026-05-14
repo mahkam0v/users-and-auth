@@ -10,7 +10,7 @@ export const protect = async (req, res, next) => {
 		}
 
 		const token = header.split(" ")[1]
-		const decoded = jwt.verify(token, process.env.JWT_SECRET)
+		const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET)
 		const userId = Number.parseInt(decoded.id, 10)
 
 		if (Number.isNaN(userId) || userId <= 0) {
