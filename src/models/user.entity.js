@@ -39,6 +39,11 @@ export const UserEntity = new EntitySchema({
       enum: ["user", "admin"],
       default: "user",
     },
+    telegramChatId: {
+      type: "bigint",
+      nullable: true,
+      unique: true,
+    },
     createdAt: {
       type: "timestamp",
       createDate: true,

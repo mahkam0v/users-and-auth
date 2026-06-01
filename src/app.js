@@ -3,6 +3,7 @@ import dotenv from "dotenv"
 import userRoutes from "./routes/user.routes.js"
 import todoRoutes from "./routes/todo.routes.js"
 import { AppDataSource } from "./config/data-source.js"
+import { startBot } from "./bot/bot.js"
 
 dotenv.config()
 
@@ -34,5 +35,5 @@ const startServer = async () => {
 		process.exit(1)
 	}
 }
-
+startBot()
 startServer()

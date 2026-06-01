@@ -64,6 +64,8 @@ export const getUserById = async (id, currentUser) => {
 	return sanitizeUser(user)
 }
 
+
+// ================================================================================================
 export const createUser = async (data) => {
 	const { name, email, age, userImage, password, role } = data
 
@@ -88,6 +90,8 @@ export const createUser = async (data) => {
 
 	return sanitizeUser(user)
 }
+
+//==================================================================================================
 
 export const deleteUser = async (id) => {
 	const userId = parseUserId(id)
@@ -135,7 +139,7 @@ export const register = async (data) => {
     process.env.JWT_REFRESH_SECRET,
     { expiresIn: "7d" }
   )
-
+	
   return { 
     user: sanitizeUser(user), 
     accessToken, 
